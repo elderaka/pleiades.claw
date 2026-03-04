@@ -27,7 +27,7 @@ import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { defaultRuntime } from "../../runtime.js";
 import { formatCliCommand } from "../command-format.js";
 import { inheritOptionFromParent } from "../command-options.js";
-import { forceFreePortAndWait } from "../ports.js";
+import { forceFreePortAndWait, waitForPortBindable } from "../ports.js";
 import { ensureDevGatewayConfig } from "./dev.js";
 import { runGatewayLoop } from "./run-loop.js";
 import {
@@ -202,6 +202,22 @@ async function runGatewayCommand(opts: GatewayRunOpts) {
     defaultRuntime.error("Invalid port");
     defaultRuntime.exit(1);
   }
+  const bindRaw = toOptionString(opts.bind) ?? cfg.gateway?.bind ?? "loopback";
+  const bind =
+    bindRaw === "loopback" ||
+    bindRaw === "lan" ||
+    bindRaw === "auto" ||
+    bindRaw === "custom" ||
+    bindRaw === "tailnet"
+      ? bindRaw
+      : null;
+  if (!bind) {
+    defaultRuntime.error(
+      'Invalid --bind (use "loopback", "lan", "tailnet", "auto", or "custom")',
+    );
+    defaultRuntime.exit(1);
+    return;
+  }
   if (opts.force) {
     try {
       const { killed, waitedMs, escalatedToSigkill } =
@@ -228,6 +244,25 @@ async function runGatewayCommand(opts: GatewayRunOpts) {
             `force: waited ${waitedMs}ms for port ${port} to free`,
           );
         }
+      }
+      // After killing, verify the port is actually bindable (handles TIME_WAIT).
+      const bindProbeHost =
+        bind === "loopback"
+          ? "127.0.0.1"
+          : bind === "lan"
+            ? "0.0.0.0"
+            : bind === "custom"
+              ? toOptionString(cfg.gateway?.customBindHost)
+              : undefined;
+      const bindWaitMs = await waitForPortBindable(port, {
+        timeoutMs: 3000,
+        intervalMs: 150,
+        host: bindProbeHost,
+      });
+      if (bindWaitMs > 0) {
+        gatewayLog.info(
+          `force: waited ${bindWaitMs}ms for port ${port} to become bindable`,
+        );
       }
     } catch (err) {
       defaultRuntime.error(`Force: ${String(err)}`);

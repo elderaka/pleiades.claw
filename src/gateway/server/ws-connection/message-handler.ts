@@ -51,7 +51,10 @@ import {
 } from "../../net.js";
 import { resolveNodeCommandAllowlist } from "../../node-command-policy.js";
 import { checkBrowserOrigin } from "../../origin-check.js";
-import { GATEWAY_CLIENT_IDS } from "../../protocol/client-info.js";
+import {
+  GATEWAY_CLIENT_IDS,
+  GATEWAY_CLIENT_MODES,
+} from "../../protocol/client-info.js";
 import {
   ConnectErrorDetailCodes,
   resolveDeviceAuthConnectErrorDetailCode,
@@ -113,6 +116,10 @@ type SubsystemLogger = ReturnType<typeof createSubsystemLogger>;
 const DEVICE_SIGNATURE_SKEW_MS = 2 * 60 * 1000;
 const BROWSER_ORIGIN_LOOPBACK_RATE_LIMIT_IP = "198.18.0.1";
 
+export type WsOriginCheckMetrics = {
+  hostHeaderFallbackAccepted: number;
+};
+
 type HandshakeBrowserSecurityContext = {
   hasBrowserOriginHeader: boolean;
   enforceOriginCheckForAnyClient: boolean;
@@ -158,6 +165,29 @@ function shouldAllowSilentLocalPairing(params: {
       params.isControlUi ||
       params.isWebchat) &&
     (params.reason === "not-paired" || params.reason === "scope-upgrade")
+  );
+}
+
+function shouldSkipBackendSelfPairing(params: {
+  connectParams: ConnectParams;
+  isLocalClient: boolean;
+  hasBrowserOriginHeader: boolean;
+  sharedAuthOk: boolean;
+  authMethod: GatewayAuthResult["method"];
+}): boolean {
+  const isGatewayBackendClient =
+    params.connectParams.client.id === GATEWAY_CLIENT_IDS.GATEWAY_CLIENT &&
+    params.connectParams.client.mode === GATEWAY_CLIENT_MODES.BACKEND;
+  if (!isGatewayBackendClient) {
+    return false;
+  }
+  const usesSharedSecretAuth =
+    params.authMethod === "token" || params.authMethod === "password";
+  return (
+    params.isLocalClient &&
+    !params.hasBrowserOriginHeader &&
+    params.sharedAuthOk &&
+    usesSharedSecretAuth
   );
 }
 
@@ -294,6 +324,7 @@ export function attachGatewayWsMessageHandler(params: {
     method?: string;
     id?: string;
   }) => void;
+  originCheckMetrics: WsOriginCheckMetrics;
   logGateway: SubsystemLogger;
   logHealth: SubsystemLogger;
   logWsControl: SubsystemLogger;
@@ -326,6 +357,7 @@ export function attachGatewayWsMessageHandler(params: {
     setHandshakeState,
     setCloseCause,
     setLastFrameMeta,
+    originCheckMetrics,
     logGateway,
     logHealth,
     logWsControl,
@@ -551,6 +583,9 @@ export function attachGatewayWsMessageHandler(params: {
           connectParams.client.id === GATEWAY_CLIENT_IDS.CONTROL_UI;
         const isWebchat = isWebchatConnect(connectParams);
         if (enforceOriginCheckForAnyClient || isControlUi || isWebchat) {
+          const hostHeaderOriginFallbackEnabled =
+            configSnapshot.gateway?.controlUi
+              ?.dangerouslyAllowHostHeaderOriginFallback === true;
           const originCheck = checkBrowserOrigin({
             requestHost,
             origin: requestOrigin,
@@ -573,6 +608,17 @@ export function attachGatewayWsMessageHandler(params: {
             );
             close(1008, truncateCloseReason(errorMessage));
             return;
+          }
+          if (originCheck.matchedBy === "host-header-fallback") {
+            originCheckMetrics.hostHeaderFallbackAccepted += 1;
+            logWsControl.warn(
+              `security warning: websocket origin accepted via Host-header fallback conn=${connId} count=${originCheckMetrics.hostHeaderFallbackAccepted} host=${requestHost ?? "n/a"} origin=${requestOrigin ?? "n/a"}`,
+            );
+            if (hostHeaderOriginFallbackEnabled) {
+              logGateway.warn(
+                "security metric: gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback accepted a websocket connect request",
+              );
+            }
           }
         }
 
@@ -838,11 +884,19 @@ export function attachGatewayWsMessageHandler(params: {
           authOk,
           authMethod,
         });
-        const skipPairing = shouldSkipControlUiPairing(
-          controlUiAuthPolicy,
-          sharedAuthOk,
-          trustedProxyAuthOk,
-        );
+        const skipPairing =
+          shouldSkipBackendSelfPairing({
+            connectParams,
+            isLocalClient,
+            hasBrowserOriginHeader,
+            sharedAuthOk,
+            authMethod,
+          }) ||
+          shouldSkipControlUiPairing(
+            controlUiAuthPolicy,
+            sharedAuthOk,
+            trustedProxyAuthOk,
+          );
         if (device && devicePublicKey && !skipPairing) {
           const formatAuditList = (items: string[] | undefined): string => {
             if (!items || items.length === 0) {
@@ -1133,7 +1187,7 @@ export function attachGatewayWsMessageHandler(params: {
           type: "hello-ok",
           protocol: PROTOCOL_VERSION,
           server: {
-            version: resolveRuntimeServiceVersion(process.env, "dev"),
+            version: resolveRuntimeServiceVersion(process.env),
             connId,
           },
           features: { methods: gatewayMethods, events },

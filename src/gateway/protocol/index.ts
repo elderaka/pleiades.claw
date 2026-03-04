@@ -216,6 +216,8 @@ import {
   WakeParamsSchema,
   type WebLoginStartParams,
   WebLoginStartParamsSchema,
+  type WebLoginPairPhoneParams,
+  WebLoginPairPhoneParamsSchema,
   type WebLoginWaitParams,
   WebLoginWaitParamsSchema,
   type WizardCancelParams,
@@ -389,6 +391,9 @@ export const validateChatEvent = ajv.compile(ChatEventSchema);
 export const validateUpdateRunParams = ajv.compile<UpdateRunParams>(UpdateRunParamsSchema);
 export const validateWebLoginStartParams =
   ajv.compile<WebLoginStartParams>(WebLoginStartParamsSchema);
+export const validateWebLoginPairPhoneParams = ajv.compile<WebLoginPairPhoneParams>(
+  WebLoginPairPhoneParamsSchema,
+);
 export const validateWebLoginWaitParams = ajv.compile<WebLoginWaitParams>(WebLoginWaitParamsSchema);
 
 export function formatValidationErrors(errors: ErrorObject[] | null | undefined) {

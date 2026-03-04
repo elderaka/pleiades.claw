@@ -35,6 +35,12 @@ const startWebLoginWithQrLazy: PluginRuntime["channel"]["whatsapp"]["startWebLog
   return startWebLoginWithQr(...args);
 };
 
+const startWebLoginWithPairingCodeLazy: PluginRuntime["channel"]["whatsapp"]["startWebLoginWithPairingCode"] =
+  async (...args) => {
+    const { startWebLoginWithPairingCode } = await loadWebLoginQr();
+    return startWebLoginWithPairingCode(...args);
+  };
+
 const waitForWebLoginLazy: PluginRuntime["channel"]["whatsapp"]["waitForWebLogin"] = async (
   ...args
 ) => {
@@ -101,6 +107,7 @@ export function createRuntimeWhatsApp(): PluginRuntime["channel"]["whatsapp"] {
     sendPollWhatsApp: sendPollWhatsAppLazy,
     loginWeb: loginWebLazy,
     startWebLoginWithQr: startWebLoginWithQrLazy,
+    startWebLoginWithPairingCode: startWebLoginWithPairingCodeLazy,
     waitForWebLogin: waitForWebLoginLazy,
     monitorWebChannel: monitorWebChannelLazy,
     handleWhatsAppAction: handleWhatsAppActionLazy,

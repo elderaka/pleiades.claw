@@ -248,6 +248,11 @@ export type ChannelLoginWithQrStartResult = {
   message: string;
 };
 
+export type ChannelLoginWithPairingCodeStartResult = {
+  pairingCode?: string;
+  message: string;
+};
+
 export type ChannelLoginWithQrWaitResult = {
   connected: boolean;
   message: string;
@@ -280,6 +285,13 @@ export type ChannelGatewayAdapter<ResolvedAccount = unknown> = {
     timeoutMs?: number;
     verbose?: boolean;
   }) => Promise<ChannelLoginWithQrStartResult>;
+  loginWithPairingCodeStart?: (params: {
+    phoneNumber: string;
+    accountId?: string;
+    force?: boolean;
+    timeoutMs?: number;
+    verbose?: boolean;
+  }) => Promise<ChannelLoginWithPairingCodeStartResult>;
   loginWithQrWait?: (params: {
     accountId?: string;
     timeoutMs?: number;

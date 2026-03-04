@@ -160,6 +160,17 @@ export const WebLoginStartParamsSchema = Type.Object(
   { additionalProperties: false },
 );
 
+export const WebLoginPairPhoneParamsSchema = Type.Object(
+  {
+    phoneNumber: NonEmptyString,
+    force: Type.Optional(Type.Boolean()),
+    timeoutMs: Type.Optional(Type.Integer({ minimum: 0 })),
+    verbose: Type.Optional(Type.Boolean()),
+    accountId: Type.Optional(Type.String()),
+  },
+  { additionalProperties: false },
+);
+
 export const WebLoginWaitParamsSchema = Type.Object(
   {
     timeoutMs: Type.Optional(Type.Integer({ minimum: 0 })),

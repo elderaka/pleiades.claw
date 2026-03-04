@@ -10,7 +10,9 @@ type ReadChannelAllowFromStoreForAccount = (params: {
 }) => ReturnType<ReadChannelAllowFromStore>;
 
 type UpsertChannelPairingRequestForAccount = (
-  params: Omit<Parameters<UpsertChannelPairingRequest>[0], "accountId"> & { accountId: string },
+  params: Omit<Parameters<UpsertChannelPairingRequest>[0], "accountId"> & {
+    accountId: string;
+  },
 ) => ReturnType<UpsertChannelPairingRequest>;
 
 export type PluginRuntimeChannel = {
@@ -139,6 +141,7 @@ export type PluginRuntimeChannel = {
     sendPollWhatsApp: typeof import("../../web/outbound.js").sendPollWhatsApp;
     loginWeb: typeof import("../../web/login.js").loginWeb;
     startWebLoginWithQr: typeof import("../../web/login-qr.js").startWebLoginWithQr;
+    startWebLoginWithPairingCode: typeof import("../../web/login-qr.js").startWebLoginWithPairingCode;
     waitForWebLogin: typeof import("../../web/login-qr.js").waitForWebLogin;
     monitorWebChannel: typeof import("../../channels/web/index.js").monitorWebChannel;
     handleWhatsAppAction: typeof import("../../agents/tools/whatsapp-actions.js").handleWhatsAppAction;

@@ -319,22 +319,6 @@ async function runGatewayCommand(opts: GatewayRunOpts) {
     defaultRuntime.exit(1);
     return;
   }
-  const bindRaw = toOptionString(opts.bind) ?? cfg.gateway?.bind ?? "loopback";
-  const bind =
-    bindRaw === "loopback" ||
-    bindRaw === "lan" ||
-    bindRaw === "auto" ||
-    bindRaw === "custom" ||
-    bindRaw === "tailnet"
-      ? bindRaw
-      : null;
-  if (!bind) {
-    defaultRuntime.error(
-      'Invalid --bind (use "loopback", "lan", "tailnet", "auto", or "custom")',
-    );
-    defaultRuntime.exit(1);
-    return;
-  }
 
   const miskeys = extractGatewayMiskeys(snapshot?.parsed);
   const authOverride =

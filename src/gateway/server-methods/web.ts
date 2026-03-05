@@ -152,7 +152,12 @@ export const webHandlers: GatewayRequestHandlers = {
         respond(true, { ...result, message }, undefined);
       } else {
         // Auto-logout on login failure so the next attempt starts clean.
-        if (provider.gateway.logoutByAccountId) {
+        // Exception: stream errors (e.g. status=515 "Unknown Stream Errored") can fire
+        // *after* the phone has already scanned and credentials have been written.
+        // Clearing in that case destroys a valid pairing.  If no credentials exist the
+        // call would have been a no-op anyway, so skipping is always safe here.
+        const isStreamError = /\bstream\b/i.test(result.message ?? "");
+        if (!isStreamError && provider.gateway.logoutByAccountId) {
           const logoutResult = await provider.gateway.logoutByAccountId({ accountId });
           context.markChannelLoggedOut(provider.id, logoutResult.cleared, accountId);
         }

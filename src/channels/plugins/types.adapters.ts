@@ -318,6 +318,7 @@ export type ChannelLoginWithQrStartResult = {
 export type ChannelLoginWithQrWaitResult = {
   connected: boolean;
   message: string;
+  who?: string;
 };
 
 export type ChannelLogoutContext<ResolvedAccount = unknown> = {
@@ -351,6 +352,14 @@ export type ChannelGatewayAdapter<ResolvedAccount = unknown> = {
     accountId?: string;
     timeoutMs?: number;
   }) => Promise<ChannelLoginWithQrWaitResult>;
+  /**
+   * Clears stored credentials for the given account without needing the resolved account object.
+   * Used by the gateway handler to auto-logout after a failed login attempt.
+   */
+  logoutByAccountId?: (params: {
+    accountId?: string;
+    runtime?: RuntimeEnv;
+  }) => Promise<ChannelLogoutResult>;
   logoutAccount?: (ctx: ChannelLogoutContext<ResolvedAccount>) => Promise<ChannelLogoutResult>;
 };
 

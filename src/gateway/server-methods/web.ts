@@ -186,7 +186,7 @@ export const webHandlers: GatewayRequestHandlers = {
         accountId,
         onQr: (qrDataUrl: string) => {
           if (connId) {
-            context.broadcastToConnIds(new Set([connId]), "web.qr", { qrDataUrl });
+            context.broadcastToConnIds("web.qr", { qrDataUrl }, new Set([connId]));
           }
         },
       });

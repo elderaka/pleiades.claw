@@ -89,6 +89,9 @@ async function restartLoginSocket(login: ActiveLogin, runtime: RuntimeEnv) {
     info("WhatsApp asked for a restart after pairing (code 515); retrying connection once…"),
   );
   closeSocket(login.sock);
+  // Wait for Baileys to flush pairing creds to disk before creating the new socket
+  // that will read them — eliminating the read-before-write race on `credsSaveQueue`.
+  await waitForCredsSave();
   try {
     const sock = await createWaSocket(false, login.verbose, {
       authDir: login.authDir,

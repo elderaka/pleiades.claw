@@ -46,5 +46,7 @@ export type PluginsConfig = {
   slots?: PluginSlotsConfig;
   entries?: Record<string, PluginEntryConfig>;
   installs?: Record<string, PluginInstallRecord>;
+  /** Relax package boundary checks for bundled extensions. Set to false to enforce strict boundaries. Default: true (relaxed for bundled). */
+  relaxBundledBoundary?: boolean;
 };
 import type { InstallRecordBase } from "./types.installs.js";

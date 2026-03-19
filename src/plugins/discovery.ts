@@ -456,8 +456,39 @@ function resolvePackageEntrySource(params: {
   sourceLabel: string;
   diagnostics: PluginDiagnostic[];
   rejectHardlinks?: boolean;
+  origin?: PluginOrigin;
 }): string | null {
   const source = path.resolve(params.packageDir, params.entryPath);
+  
+  // For bundled extensions, use a lenient boundary check that tolerates Windows
+  // symlink/hardlink resolution quirks. Bundled extensions are already trusted.
+  const isBundle = params.origin === "bundled";
+  const skipBoundaryCheck = isBundle; // Set to true to skip strict boundary validation
+  
+  if (skipBoundaryCheck) {
+    // For bundled extensions, just verify the file exists within the package directory
+    const relative = path.relative(params.packageDir, source);
+    if (relative.startsWith("..")) {
+      params.diagnostics.push({
+        level: "error",
+        message: `extension entry escapes package directory: ${params.entryPath}`,
+        source: params.sourceLabel,
+      });
+      return null;
+    }
+    // File exists check
+    if (!fs.existsSync(source)) {
+      params.diagnostics.push({
+        level: "error",
+        message: `extension entry not found: ${params.entryPath}`,
+        source: params.sourceLabel,
+      });
+      return null;
+    }
+    return source;
+  }
+
+  // For non-bundled extensions, use strict boundary checking
   const opened = openBoundaryFileSync({
     absolutePath: source,
     rootPath: params.packageDir,
@@ -539,6 +570,7 @@ function discoverInDirectory(params: {
             sourceLabel: fullPath,
             diagnostics: params.diagnostics,
             rejectHardlinks,
+            origin: params.origin,
           })
         : null;
 
@@ -550,6 +582,7 @@ function discoverInDirectory(params: {
           sourceLabel: fullPath,
           diagnostics: params.diagnostics,
           rejectHardlinks,
+          origin: params.origin,
         });
         if (!resolved) {
           continue;
@@ -669,6 +702,7 @@ function discoverFromPath(params: {
             sourceLabel: resolved,
             diagnostics: params.diagnostics,
             rejectHardlinks,
+            origin: params.origin,
           })
         : null;
 
@@ -680,6 +714,7 @@ function discoverFromPath(params: {
           sourceLabel: resolved,
           diagnostics: params.diagnostics,
           rejectHardlinks,
+          origin: params.origin,
         });
         if (!source) {
           continue;

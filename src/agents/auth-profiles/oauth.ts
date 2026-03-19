@@ -206,7 +206,8 @@ async function refreshOAuthTokenWithLock(params: {
               return null;
             }
             try {
-              const { getOAuthApiKey } = await import("@mariozechner/pi-ai/oauth").catch(() => ({}));
+              const module = (await import("@mariozechner/pi-ai/oauth").catch(() => ({}))) as any;
+              const getOAuthApiKey = module.getOAuthApiKey;
               if (!getOAuthApiKey) {
                 return null;
               }

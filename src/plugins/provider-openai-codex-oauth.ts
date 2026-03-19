@@ -23,7 +23,7 @@ export async function loginOpenAICodexOAuth(params: {
     }
     loginOpenAICodex = module.loginOpenAICodex;
   } catch (err) {
-    runtime.error(`OpenAI OAuth failed: ${String(err)}`);
+    params.runtime.error(`OpenAI OAuth failed: ${String(err)}`);
     await params.prompter.note("OpenAI Codex OAuth feature is not available.", "OAuth unavailable");
     throw err;
   }

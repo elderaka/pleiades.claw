@@ -258,7 +258,7 @@ async function createRealSession(
     try {
       await client.connect(transport);
       const tools = await client.listTools();
-      if (!tools.tools.some((tool) => tool.name === "list_pages")) {
+      if (!tools.tools.some((tool: any) => tool.name === "list_pages")) {
         throw new Error("Chrome MCP server did not expose the expected navigation tools.");
       }
     } catch (err) {

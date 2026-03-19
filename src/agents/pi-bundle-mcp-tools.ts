@@ -24,8 +24,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-async function listAllTools(client: Client) {
-  const tools: Awaited<ReturnType<Client["listTools"]>>["tools"] = [];
+async function listAllTools(client: any) {
+  const tools: any[] = [];
   let cursor: string | undefined;
   do {
     const page = await client.listTools(cursor ? { cursor } : undefined);
@@ -83,7 +83,7 @@ function toAgentToolResult(params: {
   };
 }
 
-function attachStderrLogging(serverName: string, transport: StdioClientTransport) {
+function attachStderrLogging(serverName: string, transport: any) {
   const stderr = transport.stderr;
   if (!stderr || typeof stderr.on !== "function") {
     return undefined;
@@ -211,7 +211,7 @@ export async function createBundleMcpToolRuntime(params: {
               const result = (await client.callTool({
                 name: tool.name,
                 arguments: isRecord(input) ? input : {},
-              })) as CallToolResult;
+              })) as any;
               return toAgentToolResult({
                 serverName,
                 toolName: tool.name,

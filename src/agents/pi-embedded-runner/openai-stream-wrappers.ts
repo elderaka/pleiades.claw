@@ -317,7 +317,10 @@ export function createOpenAIResponsesContextManagementWrapper(
             compactThreshold,
           });
         }
-        return originalOnPayload?.(payload);
+        return (originalOnPayload as ((payload: unknown, model?: unknown) => unknown) | undefined)?.(
+          payload,
+          model,
+        );
       },
     });
   };
@@ -342,7 +345,10 @@ export function createOpenAIFastModeWrapper(baseStreamFn: StreamFn | undefined):
             model,
           });
         }
-        return originalOnPayload?.(payload);
+        return (originalOnPayload as ((payload: unknown, model?: unknown) => unknown) | undefined)?.(
+          payload,
+          model,
+        );
       },
     });
   };

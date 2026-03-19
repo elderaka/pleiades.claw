@@ -22,7 +22,10 @@ export function createToolStreamWrapper(
         if (payload && typeof payload === "object") {
           (payload as Record<string, unknown>).tool_stream = true;
         }
-        return originalOnPayload?.(payload);
+        return (originalOnPayload as ((payload: unknown, model?: unknown) => unknown) | undefined)?.(
+          payload,
+          model,
+        );
       },
     });
   };

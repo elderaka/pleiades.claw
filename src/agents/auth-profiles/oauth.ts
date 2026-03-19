@@ -1,9 +1,4 @@
-import {
-  getOAuthApiKey,
-  getOAuthProviders,
-  type OAuthCredentials,
-  type OAuthProvider,
-} from "@mariozechner/pi-ai/oauth";
+import type { OAuthCredentials, OAuthProvider } from "@mariozechner/pi-ai/oauth";
 import { loadConfig, type OpenClawConfig } from "../../config/config.js";
 import { coerceSecretRef } from "../../config/types.secrets.js";
 import { withFileLock } from "../../infra/file-lock.js";
@@ -17,7 +12,24 @@ import { suggestOAuthProfileIdForLegacyDefault } from "./repair.js";
 import { ensureAuthProfileStore, saveAuthProfileStore } from "./store.js";
 import type { AuthProfileStore, OAuthCredential } from "./types.js";
 
-const OAUTH_PROVIDER_IDS = new Set<string>(getOAuthProviders().map((provider) => provider.id));
+let OAUTH_PROVIDER_IDS: Set<string> | null = null;
+
+async function getOAuthProviderIds(): Promise<Set<string>> {
+  if (OAUTH_PROVIDER_IDS) {
+    return OAUTH_PROVIDER_IDS;
+  }
+  try {
+    const { getOAuthProviders } = await import("@mariozechner/pi-ai/oauth").catch(() => null) ?? {};
+    if (!getOAuthProviders) {
+      return new Set();
+    }
+    OAUTH_PROVIDER_IDS = new Set<string>(getOAuthProviders().map((provider: any) => provider.id));
+  } catch (err) {
+    log.debug("Failed to load OAuth providers", { error: err instanceof Error ? err.message : String(err) });
+    OAUTH_PROVIDER_IDS = new Set();
+  }
+  return OAUTH_PROVIDER_IDS;
+}
 
 let providerRuntimePromise:
   | Promise<typeof import("../../plugins/provider-runtime.runtime.js")>
@@ -29,7 +41,7 @@ function loadProviderRuntime() {
 }
 
 const isOAuthProvider = (provider: string): provider is OAuthProvider =>
-  OAUTH_PROVIDER_IDS.has(provider);
+  OAUTH_PROVIDER_IDS?.has(provider) ?? false;
 
 const resolveOAuthProvider = (provider: string): OAuthProvider | null =>
   isOAuthProvider(provider) ? provider : null;
@@ -151,6 +163,9 @@ async function refreshOAuthTokenWithLock(params: {
   const authPath = resolveAuthStorePath(params.agentDir);
   ensureAuthStoreFile(authPath);
 
+  const oauthProviderIds = await getOAuthProviderIds();
+  const isOAuthProviderAvailable = (provider: string) => oauthProviderIds.has(provider);
+
   return await withFileLock(authPath, AUTH_STORE_LOCK_OPTIONS, async () => {
     const store = ensureAuthProfileStore(params.agentDir);
     const cred = store.profiles[params.profileId];
@@ -187,11 +202,19 @@ async function refreshOAuthTokenWithLock(params: {
             return { apiKey: newCredentials.access, newCredentials };
           })()
         : await (async () => {
-            const oauthProvider = resolveOAuthProvider(cred.provider);
-            if (!oauthProvider) {
+            if (!isOAuthProviderAvailable(cred.provider)) {
               return null;
             }
-            return await getOAuthApiKey(oauthProvider, oauthCreds);
+            try {
+              const { getOAuthApiKey } = await import("@mariozechner/pi-ai/oauth").catch(() => ({}));
+              if (!getOAuthApiKey) {
+                return null;
+              }
+              return await getOAuthApiKey(cred.provider, oauthCreds);
+            } catch (err) {
+              log.debug("Failed to call getOAuthApiKey", { error: err instanceof Error ? err.message : String(err) });
+              return null;
+            }
           })();
     if (!result) {
       return null;

@@ -1,4 +1,4 @@
-import { loginOpenAICodex, type OAuthCredentials } from "@mariozechner/pi-ai/oauth";
+import type { OAuthCredentials } from "@mariozechner/pi-ai/oauth";
 import type { RuntimeEnv } from "../runtime.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
 import { createVpsAwareOAuthHandlers } from "./provider-oauth-flow.js";
@@ -14,6 +14,20 @@ export async function loginOpenAICodexOAuth(params: {
   openUrl: (url: string) => Promise<void>;
   localBrowserMessage?: string;
 }): Promise<OAuthCredentials | null> {
+  // Dynamic import to avoid breaking CLI if pi-ai/oauth not available
+  let loginOpenAICodex: any;
+  try {
+    const module = await import("@mariozechner/pi-ai/oauth").catch(() => null);
+    if (!module?.loginOpenAICodex) {
+      throw new Error("loginOpenAICodex not available from @mariozechner/pi-ai/oauth");
+    }
+    loginOpenAICodex = module.loginOpenAICodex;
+  } catch (err) {
+    runtime.error(`OpenAI OAuth failed: ${String(err)}`);
+    await params.prompter.note("OpenAI Codex OAuth feature is not available.", "OAuth unavailable");
+    throw err;
+  }
+
   const { prompter, runtime, isRemote, openUrl, localBrowserMessage } = params;
   const preflight = await runOpenAIOAuthTlsPreflight();
   if (!preflight.ok && preflight.kind === "tls-cert") {

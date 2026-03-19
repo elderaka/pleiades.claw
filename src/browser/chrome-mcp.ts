@@ -2,8 +2,6 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import type { ChromeMcpSnapshotNode } from "./chrome-mcp.snapshot.js";
 import type { BrowserTab } from "./client.js";
 import { BrowserProfileUnavailableError, BrowserTabNotFoundError } from "./errors.js";
@@ -21,8 +19,8 @@ type ChromeMcpToolResult = {
 };
 
 type ChromeMcpSession = {
-  client: Client;
-  transport: StdioClientTransport;
+  client: any;
+  transport: any;
   ready: Promise<void>;
 };
 
@@ -224,6 +222,25 @@ async function createRealSession(
   profileName: string,
   userDataDir?: string,
 ): Promise<ChromeMcpSession> {
+  // Dynamic imports to avoid breaking if @modelcontextprotocol/sdk not installed
+  let Client: any, StdioClientTransport: any;
+  try {
+    const mcpClientModule = await import("@modelcontextprotocol/sdk/client/index.js").catch(() => null);
+    const mcpStdioModule = await import("@modelcontextprotocol/sdk/client/stdio.js").catch(() => null);
+    if (!mcpClientModule || !mcpStdioModule) {
+      throw new Error("MCP SDK modules not available");
+    }
+    Client = mcpClientModule.Client;
+    StdioClientTransport = mcpStdioModule.StdioClientTransport;
+  } catch (err) {
+    const targetLabel = userDataDir
+      ? `the configured Chromium user data dir (${userDataDir})`
+      : "Google Chrome's default profile";
+    throw new BrowserProfileUnavailableError(
+      `Chrome MCP initialization failed: MCP SDK not available. Details: ${String(err)}`,
+    );
+  }
+
   const transport = new StdioClientTransport({
     command: DEFAULT_CHROME_MCP_COMMAND,
     args: buildChromeMcpArgs(userDataDir),

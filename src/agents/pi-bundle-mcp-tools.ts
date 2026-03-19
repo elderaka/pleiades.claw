@@ -1,7 +1,4 @@
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { logDebug, logWarn } from "../logger.js";
 import { loadEmbeddedPiMcpConfig } from "./embedded-pi-mcp.js";
@@ -18,8 +15,8 @@ type BundleMcpToolRuntime = {
 
 type BundleMcpSession = {
   serverName: string;
-  client: Client;
-  transport: StdioClientTransport;
+  client: any;
+  transport: any;
   detachStderr?: () => void;
 };
 
@@ -41,7 +38,7 @@ async function listAllTools(client: Client) {
 function toAgentToolResult(params: {
   serverName: string;
   toolName: string;
-  result: CallToolResult;
+  result: any;
 }): AgentToolResult<unknown> {
   const content = Array.isArray(params.result.content)
     ? (params.result.content as AgentToolResult<unknown>["content"])
@@ -124,6 +121,21 @@ export async function createBundleMcpToolRuntime(params: {
   cfg?: OpenClawConfig;
   reservedToolNames?: Iterable<string>;
 }): Promise<BundleMcpToolRuntime> {
+  // Dynamic imports to avoid breaking CLI if @modelcontextprotocol/sdk not installed
+  let Client: any, StdioClientTransport: any;
+  try {
+    const mcpClientModule = await import("@modelcontextprotocol/sdk/client/index.js").catch(() => null);
+    const mcpStdioModule = await import("@modelcontextprotocol/sdk/client/stdio.js").catch(() => null);
+    if (!mcpClientModule || !mcpStdioModule) {
+      throw new Error("MCP SDK modules not available");
+    }
+    Client = mcpClientModule.Client;
+    StdioClientTransport = mcpStdioModule.StdioClientTransport;
+  } catch (err) {
+    logWarn(`bundle-mcp: Failed to load MCP SDK: ${String(err)}. MCP tools will not be available.`);
+    return { tools: [], dispose: async () => {} };
+  }
+
   const loaded = loadEmbeddedPiMcpConfig({
     workspaceDir: params.workspaceDir,
     cfg: params.cfg,

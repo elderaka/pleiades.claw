@@ -630,11 +630,15 @@ export async function compactEmbeddedPiSessionDirect(
           accountId: params.agentAccountId,
         }) ?? [])
       : undefined;
-    if (runtimeChannel === "telegram" && params.config) {
-      const inlineButtonsScope = resolveTelegramInlineButtonsScope({
-        cfg: params.config,
-        accountId: params.agentAccountId ?? undefined,
-      });
+    if ((runtimeChannel === "telegram" || runtimeChannel === "webchat") && params.config) {
+      // For Telegram, check scope. For webchat, always enable if connected.
+      const inlineButtonsScope = runtimeChannel === "telegram" 
+        ? resolveTelegramInlineButtonsScope({
+            cfg: params.config,
+            accountId: params.agentAccountId ?? undefined,
+          })
+        : "all";
+
       if (inlineButtonsScope !== "off") {
         if (!runtimeCapabilities) {
           runtimeCapabilities = [];

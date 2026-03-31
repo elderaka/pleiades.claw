@@ -133,6 +133,7 @@ export type ChannelMeta = {
   forceAccountBinding?: boolean;
   preferSessionLookupForAnnounceTarget?: boolean;
   preferOver?: string[];
+  capabilities?: string[];
 };
 
 export type ChannelAccountSnapshot = {

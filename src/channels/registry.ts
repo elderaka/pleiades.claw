@@ -126,6 +126,7 @@ const CHAT_CHANNEL_META: Record<ChatChannelId, ChannelMeta> = {
     docsLabel: "webchat",
     blurb: "Internal webchat gateway channel.",
     systemImage: "bubble.left.and.bubble.right.fill",
+    capabilities: ["inlineButtons"],
   },
 };
 

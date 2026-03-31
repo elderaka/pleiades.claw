@@ -42,6 +42,10 @@ export const ChatSendParamsSchema = Type.Object(
     systemInputProvenance: Type.Optional(InputProvenanceSchema),
     systemProvenanceReceipt: Type.Optional(Type.String()),
     idempotencyKey: NonEmptyString,
+    /**
+     * Optional choice identifier from the surface (e.g. coffee-talk style buttons).
+     */
+    choiceId: Type.Optional(Type.String()),
   },
   { additionalProperties: false },
 );

@@ -1131,6 +1131,7 @@ export const chatHandlers: GatewayRequestHandlers = {
       systemInputProvenance?: InputProvenance;
       systemProvenanceReceipt?: string;
       idempotencyKey: string;
+      choiceId?: string;
     };
     if ((p.systemInputProvenance || p.systemProvenanceReceipt) && !isAcpBridgeClient(client)) {
       respond(
@@ -1312,6 +1313,7 @@ export const chatHandlers: GatewayRequestHandlers = {
         SenderName: clientInfo?.displayName,
         SenderUsername: clientInfo?.displayName,
         GatewayClientScopes: client?.connect?.scopes,
+        ChoiceId: p.choiceId,
       };
 
       const agentId = resolveSessionAgentId({

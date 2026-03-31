@@ -179,6 +179,10 @@ export type MsgContext = {
    * Used for hook confirmation messages like "Session context saved to memory".
    */
   HookMessages?: string[];
+  /**
+   * Optional choice identifier from the surface (e.g. coffee-talk style buttons).
+   */
+  ChoiceId?: string;
 };
 
 export type FinalizedMsgContext = Omit<MsgContext, "CommandAuthorized"> & {

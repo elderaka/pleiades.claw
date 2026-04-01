@@ -123,6 +123,19 @@ function buildSendSchema(options: { includeInteractive: boolean }) {
       }),
     ),
     interactive: Type.Optional(interactiveMessageSchema),
+    sentiment: Type.Optional(
+      Type.String({ description: "Sentiment analysis of the message (Unity/Pleiadesian only)." }),
+    ),
+    condition: Type.Optional(
+      Type.String({ description: "Agent's current condition/state (Unity/Pleiadesian only)." }),
+    ),
+    emotion: Type.Optional(
+      Type.String({ description: "Agent's current emotion for Unity animations." }),
+    ),
+    animation: Type.Optional(
+      Type.String({ description: "Specific animation trigger for Unity." }),
+    ),
+    mood: Type.Optional(Type.String({ description: "Agent's current mood level." })),
   };
   if (!options.includeInteractive) {
     delete props.interactive;

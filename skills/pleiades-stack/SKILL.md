@@ -5,7 +5,7 @@ description: Comprehensive reference for the Pleiades platform tech stack, archi
 
 # Pleiades Stack Reference (current)
 
-> Last updated: 2026-03-31
+> Last updated: 2026-04-01 — added Unity surface endpoint table and `GET /session/{session_id}/turns` docs
 
 ## Platform Overview
 
@@ -41,7 +41,59 @@ For Unity surface integration (session persistence, new-session semantics, histo
 - **Unity surface**: `/api/surfaces/unity/*` (credentialed HTTP + WS bridge into tenant OpenClaw gateway)
   - Supports conversation choices extraction and `choice_id` turn passing.
   - Per-key (60/min) and per-session (30/min) sliding-window rate limiting.
-- **Unity credential policy**: tenant users can mint keys for their own tenant; admins can mint for any tenant
+  - **Emotion/animation cues** are extracted from OpenClaw `message` tool call arguments (`emotion`, `animation`, `mood` fields) and returned in every `/chat` response. Falls back to text-keyword classification if the agent sends no explicit cue.
+
+#### Unity Surface Endpoint Reference
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `POST` | `/credentials` | JWT | Mint a Unity API key for a tenant |
+| `POST` | `/session` | API Key | Create or resume a player session |
+| `POST` | `/session/new` | API Key | Force-create a fresh session (ignores existing) |
+| `POST` | `/chat` | API Key | Send a message, get `text + cues + choices` |
+| `GET`  | `/sessions` | API Key | List sessions for a player |
+| `GET`  | `/session/{session_id}/turns` | API Key | **Fetch full message history for a session** |
+| `POST` | `/history/import` | API Key | Bulk-inject past messages into a session |
+| `GET`  | `/ws` | API Key | WebSocket stream for live events |
+
+##### `GET /api/surfaces/unity/session/{session_id}/turns`
+
+Fetches the full message history (turns) for a given session in chronological order. Useful for replaying a conversation in the Unity client when switching to a historical session from the sidebar.
+
+**Query params:**
+- `tenant_id` *(int, required)* — tenant the session belongs to
+- `limit` *(int, optional, default 100, max 500)* — max turns to return
+
+**Auth:** `X-Unity-API-Key` header
+
+**Response:**
+```json
+{
+  "session_id": "5f087b2d-...",
+  "tenant_id": 14,
+  "count": 6,
+  "turns": [
+    {
+      "role": "user",
+      "text": "Hello",
+      "cues": {},
+      "created_at": "2026-04-01T10:35:00Z"
+    },
+    {
+      "role": "assistant",
+      "text": "Hi! How can I help?",
+      "cues": { "emotion": "curious", "animation": "talk_question" },
+      "created_at": "2026-04-01T10:35:02Z"
+    }
+  ]
+}
+```
+
+**Notes:**
+- Only returns turns with `status = "ok"` and non-empty `text` (errors and imported stubs are excluded).
+- `cues` is extracted from `payload_json` stored at chat time; may be `{}` for user turns.
+- The Unity `ChatController` calls this endpoint via `PleiadesAPI.GetSessionTurnsAsync()` and replays each turn as a `MessageBubble` with the correct sender label and emotion annotation.
+
 
 ### Web (`pleiades.web/`)
 - **Framework**: Next.js 16.1.6 (App Router)
